@@ -1,1 +1,358 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fine lavoro</title>
 
+<style>
+:root {
+    color-scheme: light dark;
+}
+
+body {
+    margin: 0;
+    padding: 24px;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
+    background: linear-gradient(160deg, #e8edf7, #f7f7fb);
+}
+
+.card {
+    max-width: 520px;
+    margin: auto;
+    background: rgba(255,255,255,0.90);
+    border-radius: 28px;
+    padding: 24px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.16);
+    backdrop-filter: blur(18px);
+}
+
+h1 {
+    margin: 0;
+    font-size: 30px;
+    letter-spacing: -0.5px;
+}
+
+.subtitle {
+    margin-top: 8px;
+    margin-bottom: 22px;
+    color: #666;
+    font-size: 16px;
+}
+
+label {
+    display: block;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.input-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+input {
+    flex: 1;
+    min-width: 0;
+    padding: 14px;
+    font-size: 22px;
+    border: 1px solid #d1d5db;
+    border-radius: 14px;
+    font-family: Menlo, Monaco, Consolas, monospace;
+    background: white;
+    color: #111827;
+}
+
+button {
+    padding: 14px 18px;
+    font-size: 17px;
+    font-weight: 800;
+    border: none;
+    border-radius: 14px;
+    background: #111827;
+    color: white;
+}
+
+.targetBox {
+    background: #111827;
+    color: white;
+    border-radius: 22px;
+    padding: 18px;
+    margin-bottom: 24px;
+    display: none;
+}
+
+.targetLabel {
+    font-size: 13px;
+    opacity: 0.75;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.targetTime {
+    font-size: 42px;
+    font-weight: 800;
+    margin-top: 4px;
+    font-family: Menlo, Monaco, Consolas, monospace;
+}
+
+.error {
+    display: none;
+    color: #dc2626;
+    font-weight: 800;
+    margin-bottom: 18px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 17px;
+    display: none;
+}
+
+th {
+    text-align: left;
+    color: #6b7280;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 10px 0;
+    border-bottom: 1px solid #d1d5db;
+}
+
+td {
+    padding: 13px 0;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.time {
+    font-family: Menlo, Monaco, Consolas, monospace;
+    font-weight: 700;
+}
+
+.neg {
+    color: #dc2626;
+    font-weight: 800;
+}
+
+.pos {
+    color: #16a34a;
+    font-weight: 800;
+}
+
+.target {
+    color: #d97706;
+    font-weight: 900;
+}
+
+.footer {
+    margin-top: 18px;
+    color: #6b7280;
+    font-size: 13px;
+    line-height: 1.35;
+    display: none;
+}
+
+@media (prefers-color-scheme: dark) {
+    body {
+        background: linear-gradient(160deg, #111827, #030712);
+    }
+
+    .card {
+        background: rgba(31,41,55,0.92);
+        color: #f9fafb;
+    }
+
+    .subtitle,
+    .footer {
+        color: #9ca3af;
+    }
+
+    input {
+        background: #111827;
+        color: #f9fafb;
+        border-color: #4b5563;
+    }
+
+    button {
+        background: #f9fafb;
+        color: #111827;
+    }
+
+    th {
+        color: #9ca3af;
+        border-bottom-color: #4b5563;
+    }
+
+    td {
+        border-bottom-color: #374151;
+    }
+
+    .targetBox {
+        background: #f9fafb;
+        color: #111827;
+    }
+}
+</style>
+</head>
+
+<body>
+<div class="card">
+    <h1>Fine lavoro</h1>
+    <div class="subtitle">Calcolo automatico rispetto al target di 7h42min</div>
+
+    <label for="inputTime">Orario ingresso</label>
+
+    <div class="input-row">
+        <input id="inputTime" type="text" inputmode="numeric" maxlength="4" placeholder="0830">
+        <button onclick="calcola()">Calcola</button>
+    </div>
+
+    <div id="error" class="error"></div>
+
+    <div id="targetBox" class="targetBox">
+        <div class="targetLabel">Uscita target</div>
+        <div id="targetTime" class="targetTime">--:--</div>
+    </div>
+
+    <table id="results">
+        <thead>
+            <tr>
+                <th>Uscita</th>
+                <th>Lavoro</th>
+                <th>Saldo</th>
+            </tr>
+        </thead>
+        <tbody id="resultsBody"></tbody>
+    </table>
+
+    <div id="footer" class="footer">
+        Rosso: minuti mancanti · Verde: minuti extra · Giallo: target esatto
+    </div>
+</div>
+
+<script>
+function formatTime(total) {
+    total = ((total % 1440) + 1440) % 1440;
+    const h = Math.floor(total / 60);
+    const m = total % 60;
+    return String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0");
+}
+
+function formatWork(total) {
+    if (total < 0) total = 0;
+    const h = Math.floor(total / 60);
+    const m = total % 60;
+    return String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0");
+}
+
+function makeRow(currentTime, startMinutes, targetWork) {
+    const worked = currentTime - startMinutes;
+    const extra = worked - targetWork;
+
+    let saldo = "";
+    let cls = "";
+
+    if (extra > 0) {
+        saldo = "+" + String(extra).padStart(3, "0") + " min";
+        cls = "pos";
+    } else if (extra < 0) {
+        saldo = "-" + String(-extra).padStart(3, "0") + " min";
+        cls = "neg";
+    } else {
+        saldo = "target";
+        cls = "target";
+    }
+
+    return `
+        <tr>
+            <td class="time">${formatTime(currentTime)}</td>
+            <td>${formatWork(worked)}</td>
+            <td class="${cls}">${saldo}</td>
+        </tr>
+    `;
+}
+
+function calcola() {
+    const input = document.getElementById("inputTime").value.trim();
+    const error = document.getElementById("error");
+    const table = document.getElementById("results");
+    const body = document.getElementById("resultsBody");
+    const targetBox = document.getElementById("targetBox");
+    const targetTimeElement = document.getElementById("targetTime");
+    const footer = document.getElementById("footer");
+
+    error.style.display = "none";
+    error.textContent = "";
+    body.innerHTML = "";
+    table.style.display = "none";
+    targetBox.style.display = "none";
+    footer.style.display = "none";
+
+    if (!/^[0-2][0-9][0-5][0-9]$/.test(input)) {
+        error.textContent = "Formato non valido. Usa HHMM, ad esempio 0830.";
+        error.style.display = "block";
+        return;
+    }
+
+    const hh = parseInt(input.slice(0, 2), 10);
+    const mm = parseInt(input.slice(2, 4), 10);
+
+    if (hh > 23) {
+        error.textContent = "Ora non valida.";
+        error.style.display = "block";
+        return;
+    }
+
+    const startMinutes = hh * 60 + mm;
+    const targetWork = 7 * 60 + 42;
+    const targetTime = startMinutes + targetWork;
+
+    const lowerLimit = 12 * 60;
+    const finalLimit = 19 * 60;
+
+    let html = "";
+
+    let prevSlot = Math.floor(targetTime / 30) * 30;
+
+    if (prevSlot === targetTime) {
+        prevSlot -= 30;
+    }
+
+    let before = [];
+
+    while (prevSlot >= lowerLimit) {
+        before.push(prevSlot);
+        prevSlot -= 30;
+    }
+
+    before.reverse().forEach(slot => {
+        html += makeRow(slot, startMinutes, targetWork);
+    });
+
+    html += makeRow(targetTime, startMinutes, targetWork);
+
+    let nextSlot = (Math.floor(targetTime / 30) + 1) * 30;
+
+    while (nextSlot <= finalLimit) {
+        html += makeRow(nextSlot, startMinutes, targetWork);
+        nextSlot += 30;
+    }
+
+    targetTimeElement.textContent = formatTime(targetTime);
+    body.innerHTML = html;
+
+    targetBox.style.display = "block";
+    table.style.display = "table";
+    footer.style.display = "block";
+}
+
+document.getElementById("inputTime").addEventListener("keydown", function(event) {
+    if (event.key === "Enter") {
+        calcola();
+    }
+});
+</script>
+</body>
+</html>
