@@ -43,32 +43,68 @@ h1 {
 label {
     display: block;
     font-weight: 700;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
 }
 
-.picker-row {
+.wheel-wrapper {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-bottom: 18px;
+    margin-bottom: 20px;
 }
 
-select {
-    flex: 1;
-    padding: 14px;
-    font-size: 24px;
-    border: 1px solid #d1d5db;
+.wheel-wrapper::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50px;
+    height: 50px;
     border-radius: 14px;
-    font-family: Menlo, Monaco, Consolas, monospace;
+    background: rgba(17,24,39,0.08);
+    pointer-events: none;
+}
+
+.wheel {
+    flex: 1;
+    height: 150px;
+    overflow-y: scroll;
+    scroll-snap-type: y mandatory;
+    border: 1px solid #d1d5db;
+    border-radius: 18px;
     background: white;
-    color: #111827;
     text-align: center;
+    font-family: Menlo, Monaco, Consolas, monospace;
+    font-size: 28px;
+    font-weight: 800;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+
+.wheel::-webkit-scrollbar {
+    display: none;
+}
+
+.wheel-item {
+    height: 50px;
+    line-height: 50px;
+    scroll-snap-align: center;
+    color: #9ca3af;
+    transition: color 0.12s ease, font-size 0.12s ease, opacity 0.12s ease;
+}
+
+.wheel-item.selected {
+    color: #111827;
+    font-size: 34px;
+    opacity: 1;
 }
 
 .colon {
-    font-size: 30px;
-    font-weight: 800;
+    font-size: 34px;
+    font-weight: 900;
     color: #374151;
+    z-index: 1;
 }
 
 .main-button {
@@ -178,10 +214,21 @@ td {
         color: #9ca3af;
     }
 
-    select {
+    .wheel-wrapper::before {
+        background: rgba(249,250,251,0.10);
+    }
+
+    .wheel {
         background: #111827;
-        color: #f9fafb;
         border-color: #4b5563;
+    }
+
+    .wheel-item {
+        color: #6b7280;
+    }
+
+    .wheel-item.selected {
+        color: #f9fafb;
     }
 
     .colon {
@@ -217,10 +264,10 @@ td {
 
     <label>Orario ingresso</label>
 
-    <div class="picker-row">
-        <select id="hourPicker"></select>
-        <span class="colon">:</span>
-        <select id="minutePicker"></select>
+    <div class="wheel-wrapper">
+        <div class="wheel" id="hourWheel"></div>
+        <div class="colon">:</div>
+        <div class="wheel" id="minuteWheel"></div>
     </div>
 
     <button class="main-button" onclick="calcola()">Calcola</button>
@@ -249,6 +296,9 @@ td {
 </div>
 
 <script>
+let selectedHour = 8;
+let selectedMinute = 30;
+
 function formatTime(total) {
     total = ((total % 1440) + 1440) % 1440;
     const h = Math.floor(total / 60);
@@ -290,31 +340,93 @@ function makeRow(currentTime, startMinutes, targetWork) {
     `;
 }
 
-function initPickers() {
-    const hourPicker = document.getElementById("hourPicker");
-    const minutePicker = document.getElementById("minutePicker");
+function buildWheel(id, min, max, initial, onChange) {
+    const wheel = document.getElementById(id);
+    wheel.innerHTML = "";
 
-    for (let h = 0; h <= 23; h++) {
-        const option = document.createElement("option");
-        option.value = h;
-        option.textContent = String(h).padStart(2, "0");
-        hourPicker.appendChild(option);
+    const spacerTop = document.createElement("div");
+    spacerTop.className = "wheel-item";
+    spacerTop.textContent = "";
+    wheel.appendChild(spacerTop);
+
+    for (let value = min; value <= max; value++) {
+        const item = document.createElement("div");
+        item.className = "wheel-item";
+        item.dataset.value = value;
+        item.textContent = String(value).padStart(2, "0");
+        wheel.appendChild(item);
     }
 
-    for (let m = 0; m <= 59; m++) {
-        const option = document.createElement("option");
-        option.value = m;
-        option.textContent = String(m).padStart(2, "0");
-        minutePicker.appendChild(option);
+    const spacerBottom = document.createElement("div");
+    spacerBottom.className = "wheel-item";
+    spacerBottom.textContent = "";
+    wheel.appendChild(spacerBottom);
+
+    function updateSelected() {
+        const center = wheel.scrollTop + wheel.clientHeight / 2;
+        const items = Array.from(wheel.querySelectorAll(".wheel-item[data-value]"));
+
+        let closest = items[0];
+        let minDistance = Infinity;
+
+        items.forEach(item => {
+            const itemCenter = item.offsetTop + item.offsetHeight / 2;
+            const distance = Math.abs(center - itemCenter);
+
+            if (distance < minDistance) {
+                minDistance = distance;
+                closest = item;
+            }
+        });
+
+        items.forEach(item => item.classList.remove("selected"));
+        closest.classList.add("selected");
+
+        onChange(parseInt(closest.dataset.value, 10));
     }
 
-    hourPicker.value = 8;
-    minutePicker.value = 30;
+    let scrollTimer = null;
+
+    wheel.addEventListener("scroll", () => {
+        updateSelected();
+
+        clearTimeout(scrollTimer);
+        scrollTimer = setTimeout(() => {
+            const selected = wheel.querySelector(".wheel-item.selected");
+            if (selected) {
+                selected.scrollIntoView({
+                    behavior: "smooth",
+                    block: "center"
+                });
+            }
+        }, 120);
+    });
+
+    setTimeout(() => {
+        const initialItem = wheel.querySelector(`[data-value="${initial}"]`);
+        if (initialItem) {
+            initialItem.scrollIntoView({
+                behavior: "instant",
+                block: "center"
+            });
+        }
+        updateSelected();
+    }, 0);
+}
+
+function initWheels() {
+    buildWheel("hourWheel", 0, 23, 8, value => {
+        selectedHour = value;
+    });
+
+    buildWheel("minuteWheel", 0, 59, 30, value => {
+        selectedMinute = value;
+    });
 }
 
 function calcola() {
-    const hh = parseInt(document.getElementById("hourPicker").value, 10);
-    const mm = parseInt(document.getElementById("minutePicker").value, 10);
+    const hh = selectedHour;
+    const mm = selectedMinute;
 
     const error = document.getElementById("error");
     const table = document.getElementById("results");
@@ -379,7 +491,7 @@ function calcola() {
     footer.style.display = "block";
 }
 
-initPickers();
+initWheels();
 </script>
 </body>
 </html>
