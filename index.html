@@ -46,32 +46,41 @@ label {
     margin-bottom: 8px;
 }
 
-.input-row {
+.picker-row {
     display: flex;
+    align-items: center;
     gap: 10px;
-    margin-bottom: 20px;
+    margin-bottom: 18px;
 }
 
-input {
+select {
     flex: 1;
-    min-width: 0;
     padding: 14px;
-    font-size: 22px;
+    font-size: 24px;
     border: 1px solid #d1d5db;
     border-radius: 14px;
     font-family: Menlo, Monaco, Consolas, monospace;
     background: white;
     color: #111827;
+    text-align: center;
 }
 
-button {
-    padding: 14px 18px;
-    font-size: 17px;
+.colon {
+    font-size: 30px;
+    font-weight: 800;
+    color: #374151;
+}
+
+.main-button {
+    width: 100%;
+    padding: 15px 18px;
+    font-size: 18px;
     font-weight: 800;
     border: none;
     border-radius: 14px;
     background: #111827;
     color: white;
+    margin-bottom: 20px;
 }
 
 .targetBox {
@@ -169,13 +178,17 @@ td {
         color: #9ca3af;
     }
 
-    input {
+    select {
         background: #111827;
         color: #f9fafb;
         border-color: #4b5563;
     }
 
-    button {
+    .colon {
+        color: #f9fafb;
+    }
+
+    .main-button {
         background: #f9fafb;
         color: #111827;
     }
@@ -202,12 +215,15 @@ td {
     <h1>Fine lavoro</h1>
     <div class="subtitle">Calcolo automatico rispetto al target di 7h42min</div>
 
-    <label for="inputTime">Orario ingresso</label>
+    <label>Orario ingresso</label>
 
-    <div class="input-row">
-        <input id="inputTime" type="text" inputmode="numeric" maxlength="4" placeholder="0830">
-        <button onclick="calcola()">Calcola</button>
+    <div class="picker-row">
+        <select id="hourPicker"></select>
+        <span class="colon">:</span>
+        <select id="minutePicker"></select>
     </div>
+
+    <button class="main-button" onclick="calcola()">Calcola</button>
 
     <div id="error" class="error"></div>
 
@@ -274,8 +290,32 @@ function makeRow(currentTime, startMinutes, targetWork) {
     `;
 }
 
+function initPickers() {
+    const hourPicker = document.getElementById("hourPicker");
+    const minutePicker = document.getElementById("minutePicker");
+
+    for (let h = 0; h <= 23; h++) {
+        const option = document.createElement("option");
+        option.value = h;
+        option.textContent = String(h).padStart(2, "0");
+        hourPicker.appendChild(option);
+    }
+
+    for (let m = 0; m <= 59; m++) {
+        const option = document.createElement("option");
+        option.value = m;
+        option.textContent = String(m).padStart(2, "0");
+        minutePicker.appendChild(option);
+    }
+
+    hourPicker.value = 8;
+    minutePicker.value = 30;
+}
+
 function calcola() {
-    const input = document.getElementById("inputTime").value.trim();
+    const hh = parseInt(document.getElementById("hourPicker").value, 10);
+    const mm = parseInt(document.getElementById("minutePicker").value, 10);
+
     const error = document.getElementById("error");
     const table = document.getElementById("results");
     const body = document.getElementById("resultsBody");
@@ -290,17 +330,8 @@ function calcola() {
     targetBox.style.display = "none";
     footer.style.display = "none";
 
-    if (!/^[0-2][0-9][0-5][0-9]$/.test(input)) {
-        error.textContent = "Formato non valido. Usa HHMM, ad esempio 0830.";
-        error.style.display = "block";
-        return;
-    }
-
-    const hh = parseInt(input.slice(0, 2), 10);
-    const mm = parseInt(input.slice(2, 4), 10);
-
-    if (hh > 23) {
-        error.textContent = "Ora non valida.";
+    if (Number.isNaN(hh) || Number.isNaN(mm) || hh < 0 || hh > 23 || mm < 0 || mm > 59) {
+        error.textContent = "Orario non valido.";
         error.style.display = "block";
         return;
     }
@@ -348,11 +379,7 @@ function calcola() {
     footer.style.display = "block";
 }
 
-document.getElementById("inputTime").addEventListener("keydown", function(event) {
-    if (event.key === "Enter") {
-        calcola();
-    }
-});
+initPickers();
 </script>
 </body>
 </html>
