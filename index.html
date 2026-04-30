@@ -142,6 +142,26 @@ label {
     font-family: Menlo, Monaco, Consolas, monospace;
 }
 
+.targetSub {
+    margin-top: 10px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255,255,255,0.18);
+}
+
+.targetSubLabel {
+    font-size: 12px;
+    opacity: 0.75;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.targetSubTime {
+    font-size: 28px;
+    font-weight: 800;
+    margin-top: 4px;
+    font-family: Menlo, Monaco, Consolas, monospace;
+}
+
 .error {
     display: none;
     color: #dc2626;
@@ -253,6 +273,10 @@ td {
         background: #f9fafb;
         color: #111827;
     }
+
+    .targetSub {
+        border-top-color: rgba(17,24,39,0.14);
+    }
 }
 </style>
 </head>
@@ -275,8 +299,15 @@ td {
     <div id="error" class="error"></div>
 
     <div id="targetBox" class="targetBox">
-        <div class="targetLabel">Uscita target</div>
-        <div id="targetTime" class="targetTime">--:--</div>
+        <div>
+            <div class="targetLabel">Uscita target</div>
+            <div id="targetTime" class="targetTime">--:--</div>
+        </div>
+
+        <div class="targetSub">
+            <div class="targetSubLabel">Buoni pasto (6h30min)</div>
+            <div id="mealTime" class="targetSubTime">--:--</div>
+        </div>
     </div>
 
     <table id="results">
@@ -433,6 +464,7 @@ function calcola() {
     const body = document.getElementById("resultsBody");
     const targetBox = document.getElementById("targetBox");
     const targetTimeElement = document.getElementById("targetTime");
+    const mealTimeElement = document.getElementById("mealTime");
     const footer = document.getElementById("footer");
 
     error.style.display = "none";
@@ -450,7 +482,10 @@ function calcola() {
 
     const startMinutes = hh * 60 + mm;
     const targetWork = 7 * 60 + 42;
+    const mealWork = 6 * 60 + 30;
+
     const targetTime = startMinutes + targetWork;
+    const mealTime = startMinutes + mealWork;
 
     const lowerLimit = 12 * 60;
     const finalLimit = 19 * 60;
@@ -484,6 +519,7 @@ function calcola() {
     }
 
     targetTimeElement.textContent = formatTime(targetTime);
+    mealTimeElement.textContent = formatTime(mealTime);
     body.innerHTML = html;
 
     targetBox.style.display = "block";
